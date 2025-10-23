@@ -17,11 +17,14 @@ describe('PointService', () => {
     userService = module.get<PointService>(PointService);
     userPointTable = module.get<UserPointTable>(UserPointTable);
     pointHistoryTable = module.get<PointHistoryTable>(PointHistoryTable);
+    jest.useFakeTimers().setSystemTime(new Date('2025-01-01T09:00:00Z'));
+  });
+  afterEach(() => {
+    jest.clearAllMocks();
   });
 
   describe('getUserPoint', () => {
     it('특정 유저의 포인트를 조회할 수 있다', async () => {
-      jest.useFakeTimers().setSystemTime(new Date('2025-01-01T09:00:00Z'));
       // ** Given
       const userId = 1;
       const mockUserPoint: UserPoint = {
@@ -37,14 +40,11 @@ describe('PointService', () => {
       // ** Then
       expect(result).not.toStrictEqual(undefined);
       expect(result).toStrictEqual(mockUserPoint);
-
-      jest.clearAllMocks();
     });
   });
 
   describe('getPointHistoryList', () => {
     it('특정 유저의 포인트 충전/이용 내역을 조회할 수 있다', async () => {
-      jest.useFakeTimers().setSystemTime(new Date('2025-01-01T09:00:00Z'));
       // ** Given
       const userId = 1;
       const transactionType = TransactionType.CHARGE;
@@ -67,14 +67,11 @@ describe('PointService', () => {
       // ** Then
       expect(result).not.toStrictEqual(undefined);
       expect(result).toStrictEqual(expectedPointHistoryList);
-
-      jest.clearAllMocks();
     });
   });
 
   describe('chargeUserPoint', () => {
     it('특정 유저의 포인트를 충전할 수 있다.', async () => {
-      jest.useFakeTimers().setSystemTime(new Date('2025-01-01T09:00:00Z'));
       // ** Given
       const userId = 1;
       const chargeAmount = 100;
@@ -116,13 +113,10 @@ describe('PointService', () => {
         expectedPointAmount,
       );
       expect(userService.chargeUserPoint).toHaveBeenCalledTimes(1);
-
-      jest.clearAllMocks();
     });
   });
 
   describe('useUserPoint', () => {
-    jest.useFakeTimers().setSystemTime(new Date('2025-01-01T09:00:00Z'));
     it('특정 유저의 포인트를 사용할 수 있다', async () => {
       // ** Given
       const userId = 1;
