@@ -9,6 +9,10 @@ describe('PointService', () => {
   let userService: PointService;
   let userPointTable: UserPointTable;
   let pointHistoryTable: PointHistoryTable;
+  let MAX_POINT: number;
+  let MIN_POINT: number;
+  let MIN_CHARGE_POINT_UNIT: number;
+  let MIN_USE_POINT_UNIT: number;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -18,6 +22,12 @@ describe('PointService', () => {
     userService = module.get<PointService>(PointService);
     userPointTable = module.get<UserPointTable>(UserPointTable);
     pointHistoryTable = module.get<PointHistoryTable>(PointHistoryTable);
+
+    MAX_POINT = userService.getMaxPoint();
+    MIN_POINT = userService.getMinPoint();
+    MIN_CHARGE_POINT_UNIT = userService.getMinChargePointUnit();
+    MIN_USE_POINT_UNIT = userService.getMinUsePointUnit();
+
     jest.useFakeTimers().setSystemTime(new Date('2025-01-01T09:00:00Z'));
   });
   afterEach(() => {
@@ -114,7 +124,7 @@ describe('PointService', () => {
     it('특정 유저의 포인트를 충전할 수 있다.', async () => {
       // ** Given
       const userId = 1;
-      const chargeAmount = 100;
+      const chargeAmount = 1000;
       const currentPoint = { id: userId, point: 50, updateMillis: Date.now() };
       const expectedPointAmount = currentPoint.point + chargeAmount;
       const expectedPoint = {
@@ -154,6 +164,60 @@ describe('PointService', () => {
       );
       expect(userService.chargeUserPoint).toHaveBeenCalledTimes(1);
     });
+
+    it(`유저는 최대 포인트 보유량 까지 포인트를 보유할 수 있다.`, async () => {
+      // ** Given
+      const userId = 1;
+      const chargeAmount = 1000;
+      const currentPoint = {
+        id: userId,
+        point: MAX_POINT,
+        updateMillis: Date.now(),
+      };
+
+      jest.spyOn(userPointTable, 'selectById').mockResolvedValue(currentPoint);
+      jest
+        .spyOn(userPointTable, 'insertOrUpdate')
+        .mockImplementation(() => new Promise(() => {})); // 사이드이펙 방지
+      jest
+        .spyOn(pointHistoryTable, 'insert')
+        .mockImplementation(() => new Promise(() => {})); // 사이드이펙 방지
+
+      // ** When / Then
+      await expect(
+        userService.chargeUserPoint(userId, chargeAmount),
+      ).rejects.toThrow(
+        new BadRequestException(
+          `포인트는 최대 ${MAX_POINT}까지 보유할 수 있습니다.`,
+        ),
+      );
+      expect(userPointTable.insertOrUpdate).not.toHaveBeenCalled();
+      expect(pointHistoryTable.insert).not.toHaveBeenCalled();
+    });
+
+    it(`유저는 최소 충전 단위로 포인트를 충전할 수 있다.`, async () => {
+      // ** Given
+      const userId = 1;
+      const invalidChargeAmount = MIN_CHARGE_POINT_UNIT - 1;
+
+      jest
+        .spyOn(userPointTable, 'insertOrUpdate')
+        .mockImplementation(() => new Promise(() => {})); // 사이드이펙 방지
+      jest
+        .spyOn(pointHistoryTable, 'insert')
+        .mockImplementation(() => new Promise(() => {})); // 사이드이펙 방지
+
+      // ** When / Then
+      await expect(
+        userService.chargeUserPoint(userId, invalidChargeAmount),
+      ).rejects.toThrow(
+        new BadRequestException(
+          `포인트는 최소 ${MIN_CHARGE_POINT_UNIT} 단위로 충전할 수 있습니다.`,
+        ),
+      );
+      expect(userPointTable.insertOrUpdate).not.toHaveBeenCalled();
+      expect(pointHistoryTable.insert).not.toHaveBeenCalled();
+    });
   });
 
   describe('useUserPoint', () => {
@@ -170,16 +234,25 @@ describe('PointService', () => {
       // ** Given
       const userId = 1;
       const useAmount = 0;
+      jest
+        .spyOn(userPointTable, 'insertOrUpdate')
+        .mockImplementation(() => new Promise(() => {})); // 사이드이펙 방지
+      jest
+        .spyOn(pointHistoryTable, 'insert')
+        .mockImplementation(() => new Promise(() => {})); // 사이드이펙 방지
+
       // ** When / Then
       await expect(userService.useUserPoint(userId, useAmount)).rejects.toThrow(
         new BadRequestException('포인트 금액은 0보다 커야 합니다.'),
       );
+      expect(userPointTable.insertOrUpdate).not.toHaveBeenCalled();
+      expect(pointHistoryTable.insert).not.toHaveBeenCalled();
     });
 
     it('특정 유저의 포인트를 사용할 수 있다', async () => {
       // ** Given
       const userId = 1;
-      const useAmount = 50;
+      const useAmount = 100;
       const currentPoint = {
         id: userId,
         point: 100,
@@ -213,7 +286,7 @@ describe('PointService', () => {
       expect(result).toStrictEqual(expectedPoint);
       expect(userPointTable.insertOrUpdate).toHaveBeenCalledWith(
         userId,
-        useAmount,
+        expectedPointAmount,
       );
       expect(pointHistoryTable.insert).toHaveBeenCalledWith(
         userId,
@@ -225,6 +298,56 @@ describe('PointService', () => {
       expect(pointHistoryTable.insert).toHaveBeenCalledTimes(1);
       expect(userPointTable.selectById).toHaveBeenCalledTimes(1);
       expect(userService.useUserPoint).toHaveBeenCalledTimes(1);
+    });
+
+    it(`유저는 최소 사용 단위로 포인트를 사용할 수 있다.`, async () => {
+      // ** Given
+      const userId = 1;
+      const invalidUseAmount = MIN_USE_POINT_UNIT - 1;
+      jest
+        .spyOn(userPointTable, 'insertOrUpdate')
+        .mockImplementation(() => new Promise(() => {})); // 사이드이펙 방지
+      jest
+        .spyOn(pointHistoryTable, 'insert')
+        .mockImplementation(() => new Promise(() => {})); // 사이드이펙 방지
+
+      // ** When / Then
+      await expect(
+        userService.useUserPoint(userId, invalidUseAmount),
+      ).rejects.toThrow(
+        new BadRequestException(
+          `포인트는 최소 ${MIN_USE_POINT_UNIT} 단위로 사용할 수 있습니다.`,
+        ),
+      );
+      expect(userPointTable.insertOrUpdate).not.toHaveBeenCalled();
+      expect(pointHistoryTable.insert).not.toHaveBeenCalled();
+    });
+
+    it(`유저는 최소 보유 포인트 이상의 포인트를 보유해야 한다.`, async () => {
+      // ** Given
+      const userId = 1;
+      const useAmount = 1000;
+      const currentPoint = {
+        id: userId,
+        point: 500,
+        updateMillis: Date.now(),
+      };
+
+      jest.spyOn(userPointTable, 'selectById').mockResolvedValue(currentPoint);
+      jest
+        .spyOn(userPointTable, 'insertOrUpdate')
+        .mockImplementation(() => new Promise(() => {})); // 사이드이펙 방지
+      jest
+        .spyOn(pointHistoryTable, 'insert')
+        .mockImplementation(() => new Promise(() => {})); // 사이드이펙 방지
+
+      // ** When / Then
+      await expect(userService.useUserPoint(userId, useAmount)).rejects.toThrow(
+        new BadRequestException('포인트가 부족합니다.'),
+      );
+      expect(userPointTable.selectById).toHaveBeenCalledWith(userId);
+      expect(userPointTable.insertOrUpdate).not.toHaveBeenCalled();
+      expect(pointHistoryTable.insert).not.toHaveBeenCalled();
     });
   });
 });
