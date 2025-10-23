@@ -22,7 +22,7 @@ export class PointController {
    * TODO - 특정 유저의 포인트를 조회하는 기능을 작성해주세요.
    */
   @Get(':id')
-  async point(@Param('id') id): Promise<UserPoint> {
+  async point(@Param('id') id: string): Promise<UserPoint> {
     const userId = Number.parseInt(id);
     return { id: userId, point: 0, updateMillis: Date.now() };
   }
@@ -31,7 +31,7 @@ export class PointController {
    * TODO - 특정 유저의 포인트 충전/이용 내역을 조회하는 기능을 작성해주세요.
    */
   @Get(':id/histories')
-  async history(@Param('id') id): Promise<PointHistory[]> {
+  async history(@Param('id') id: string): Promise<PointHistory[]> {
     const userId = Number.parseInt(id);
     return [];
   }
@@ -41,7 +41,7 @@ export class PointController {
    */
   @Patch(':id/charge')
   async charge(
-    @Param('id') id,
+    @Param('id') id: string,
     @Body(ValidationPipe) pointDto: PointDto,
   ): Promise<UserPoint> {
     const userId = Number.parseInt(id);
@@ -54,7 +54,7 @@ export class PointController {
    */
   @Patch(':id/use')
   async use(
-    @Param('id') id,
+    @Param('id') id: string,
     @Body(ValidationPipe) pointDto: PointDto,
   ): Promise<UserPoint> {
     const userId = Number.parseInt(id);
