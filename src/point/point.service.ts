@@ -10,9 +10,25 @@ export class PointService {
     private readonly pointHistoryTable: PointHistoryTable,
   ) {}
 
-  // Constants
+  // Constants (정책사항)
   private readonly MAX_POINT = 10000; // 최대 보유 포인트
   private readonly MIN_POINT = 0; // 최소 보유 포인트
+  private readonly MIN_CHARGE_POINT_UNIT = 1000; // 최소 충전 포인트 단위
+  private readonly MIN_USE_POINT_UNIT = 100; // 최소 사용 포인트 단위
+
+  // getters
+  getMaxPoint(): number {
+    return this.MAX_POINT;
+  }
+  getMinPoint(): number {
+    return this.MIN_POINT;
+  }
+  getMinChargePointUnit(): number {
+    return this.MIN_CHARGE_POINT_UNIT;
+  }
+  getMinUsePointUnit(): number {
+    return this.MIN_USE_POINT_UNIT;
+  }
 
   // Validation helpers
   private validateUserId(userId: number): void {
@@ -20,9 +36,26 @@ export class PointService {
       throw new BadRequestException('유효하지 않은 사용자 ID입니다.');
     }
   }
+
   private validateAmount(amount: number): void {
     if (!Number.isInteger(amount) || amount <= 0) {
       throw new BadRequestException('포인트 금액은 0보다 커야 합니다.');
+    }
+  }
+
+  private validateChargeUnit(amount: number): void {
+    if (amount % this.MIN_CHARGE_POINT_UNIT !== 0) {
+      throw new BadRequestException(
+        `포인트는 최소 ${this.MIN_CHARGE_POINT_UNIT} 단위로 충전할 수 있습니다.`,
+      );
+    }
+  }
+
+  private validateUseUnit(amount: number): void {
+    if (amount % this.MIN_USE_POINT_UNIT !== 0) {
+      throw new BadRequestException(
+        `포인트는 최소 ${this.MIN_USE_POINT_UNIT} 단위로 사용할 수 있습니다.`,
+      );
     }
   }
 
@@ -64,6 +97,7 @@ export class PointService {
   async chargeUserPoint(userId: number, amount: number): Promise<UserPoint> {
     this.validateUserId(userId);
     this.validateAmount(amount);
+    this.validateChargeUnit(amount);
 
     try {
       const currentPoint = await this.userPointTable.selectById(userId);
@@ -100,6 +134,7 @@ export class PointService {
   async useUserPoint(userId: number, amount: number): Promise<UserPoint> {
     this.validateUserId(userId);
     this.validateAmount(amount);
+    this.validateUseUnit(amount);
 
     try {
       const currentPoint = await this.userPointTable.selectById(userId);
