@@ -14,8 +14,8 @@ import { PointBody as PointDto } from './point.dto';
 @Controller('/point')
 export class PointController {
   constructor(
-    private readonly userDb: UserPointTable,
-    private readonly historyDb: PointHistoryTable,
+    private readonly userPointTable: UserPointTable,
+    private readonly pointHistoryTable: PointHistoryTable,
   ) {}
 
   /**
