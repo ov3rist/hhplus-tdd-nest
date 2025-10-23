@@ -3,6 +3,7 @@ import { PointService } from './point.service';
 import { UserPointTable } from '../database/userpoint.table';
 import { PointHistoryTable } from '../database/pointhistory.table';
 import { UserPoint, PointHistory, TransactionType } from './point.model';
+import { BadRequestException } from '@nestjs/common';
 
 describe('PointService', () => {
   let userService: PointService;
@@ -24,6 +25,15 @@ describe('PointService', () => {
   });
 
   describe('getUserPoint', () => {
+    it('유효하지 않은 사용자 ID일 경우 예외를 던진다', async () => {
+      // ** Given
+      const invalidUserId = -1;
+      // ** When / Then
+      expect(userService.getUserPoint(invalidUserId)).rejects.toThrow(
+        new BadRequestException('유효하지 않은 사용자 ID입니다.'),
+      );
+    });
+
     it('특정 유저의 포인트를 조회할 수 있다', async () => {
       // ** Given
       const userId = 1;
@@ -44,6 +54,15 @@ describe('PointService', () => {
   });
 
   describe('getPointHistoryList', () => {
+    it('유효하지 않은 사용자 ID일 경우 예외를 던진다', async () => {
+      // ** Given
+      const invalidUserId = -1;
+      // ** When / Then
+      expect(userService.getUserPoint(invalidUserId)).rejects.toThrow(
+        new BadRequestException('유효하지 않은 사용자 ID입니다.'),
+      );
+    });
+
     it('특정 유저의 포인트 충전/이용 내역을 조회할 수 있다', async () => {
       // ** Given
       const userId = 1;
@@ -71,6 +90,27 @@ describe('PointService', () => {
   });
 
   describe('chargeUserPoint', () => {
+    it('유효하지 않은 사용자 ID일 경우 예외를 던진다', async () => {
+      // ** Given
+      const invalidUserId = -1;
+      // ** When / Then
+      expect(userService.getUserPoint(invalidUserId)).rejects.toThrow(
+        new BadRequestException('유효하지 않은 사용자 ID입니다.'),
+      );
+    });
+
+    it('포인트 금액은 0보다 커야 한다', async () => {
+      // ** Given
+      const userId = 1;
+      const chargeAmount = 0;
+      // ** When / Then
+      await expect(
+        userService.chargeUserPoint(userId, chargeAmount),
+      ).rejects.toThrow(
+        new BadRequestException('포인트 금액은 0보다 커야 합니다.'),
+      );
+    });
+
     it('특정 유저의 포인트를 충전할 수 있다.', async () => {
       // ** Given
       const userId = 1;
@@ -117,6 +157,25 @@ describe('PointService', () => {
   });
 
   describe('useUserPoint', () => {
+    it('유효하지 않은 사용자 ID일 경우 예외를 던진다', async () => {
+      // ** Given
+      const invalidUserId = -1;
+      // ** When / Then
+      expect(userService.getUserPoint(invalidUserId)).rejects.toThrow(
+        new BadRequestException('유효하지 않은 사용자 ID입니다.'),
+      );
+    });
+
+    it('포인트 금액은 0보다 커야 한다', async () => {
+      // ** Given
+      const userId = 1;
+      const useAmount = 0;
+      // ** When / Then
+      await expect(userService.useUserPoint(userId, useAmount)).rejects.toThrow(
+        new BadRequestException('포인트 금액은 0보다 커야 합니다.'),
+      );
+    });
+
     it('특정 유저의 포인트를 사용할 수 있다', async () => {
       // ** Given
       const userId = 1;
