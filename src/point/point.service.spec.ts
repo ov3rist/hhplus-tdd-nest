@@ -3,16 +3,18 @@ import { PointService } from './point.service';
 import { UserPointTable } from '../database/userpoint.table';
 import { PointHistoryTable } from '../database/pointhistory.table';
 import { UserPoint, PointHistory, TransactionType } from './point.model';
-import { BadRequestException } from '@nestjs/common';
+import {
+  BadRequestException,
+  InternalServerErrorException,
+} from '@nestjs/common';
+import { pointConstants, pointError } from '../constants/point.constant';
+
+const { MAX_POINT, CHARGE_POINT_UNIT, USE_POINT_UNIT } = pointConstants;
 
 describe('PointService', () => {
   let userService: PointService;
   let userPointTable: UserPointTable;
   let pointHistoryTable: PointHistoryTable;
-  let MAX_POINT: number;
-  let MIN_POINT: number;
-  let MIN_CHARGE_POINT_UNIT: number;
-  let MIN_USE_POINT_UNIT: number;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -23,15 +25,10 @@ describe('PointService', () => {
     userPointTable = module.get<UserPointTable>(UserPointTable);
     pointHistoryTable = module.get<PointHistoryTable>(PointHistoryTable);
 
-    MAX_POINT = userService.getMaxPoint();
-    MIN_POINT = userService.getMinPoint();
-    MIN_CHARGE_POINT_UNIT = userService.getMinChargePointUnit();
-    MIN_USE_POINT_UNIT = userService.getMinUsePointUnit();
-
     jest.useFakeTimers().setSystemTime(new Date('2025-01-01T09:00:00Z'));
   });
   afterEach(() => {
-    jest.clearAllMocks();
+    jest.restoreAllMocks();
   });
 
   // 헬퍼 함수: 사이드이펙트 방지를 위한 mock 설정
@@ -42,6 +39,22 @@ describe('PointService', () => {
     jest
       .spyOn(pointHistoryTable, 'insert')
       .mockImplementation(() => new Promise(() => {}));
+  };
+
+  // 헬퍼 함수: 사이드이펙트 발생시 에러가 발생하는 mock 설정
+  const mockErroredSideEffects = () => {
+    jest
+      .spyOn(userPointTable, 'selectById')
+      .mockRejectedValue(new InternalServerErrorException());
+    jest
+      .spyOn(pointHistoryTable, 'selectAllByUserId')
+      .mockRejectedValue(new InternalServerErrorException());
+    jest
+      .spyOn(userPointTable, 'insertOrUpdate')
+      .mockRejectedValue(new InternalServerErrorException());
+    jest
+      .spyOn(pointHistoryTable, 'insert')
+      .mockRejectedValue(new InternalServerErrorException());
   };
 
   // 헬퍼 함수: 사이드이펙트 방지 검증
@@ -76,6 +89,17 @@ describe('PointService', () => {
       // ** Then
       expect(result).not.toStrictEqual(undefined);
       expect(result).toStrictEqual(mockUserPoint);
+    });
+
+    it('데이터베이스 오류 발생 시 서버 에러를 반환한다.', async () => {
+      // ** Given
+      const userId = 1;
+      mockErroredSideEffects();
+
+      // ** When / Then
+      await expect(userService.getUserPoint(userId)).rejects.toThrow(
+        new InternalServerErrorException(),
+      );
     });
   });
 
@@ -112,6 +136,17 @@ describe('PointService', () => {
       // ** Then
       expect(result).not.toStrictEqual(undefined);
       expect(result).toStrictEqual(expectedPointHistoryList);
+    });
+
+    it('핸들링 되지 않는 오류 발생 시 오류를 던진다', async () => {
+      // ** Given
+      const userId = 1;
+      mockErroredSideEffects();
+
+      // ** When / Then
+      await expect(userService.getPointHistoryList(userId)).rejects.toThrow(
+        new InternalServerErrorException(),
+      );
     });
   });
 
@@ -197,28 +232,35 @@ describe('PointService', () => {
       // ** When / Then
       await expect(
         userService.chargeUserPoint(userId, chargeAmount),
-      ).rejects.toThrow(
-        new BadRequestException(
-          `포인트는 최대 ${MAX_POINT}까지 보유할 수 있습니다.`,
-        ),
-      );
+      ).rejects.toThrow(new BadRequestException(pointError.EXCEED_MAX_POINT));
       expectNoSideEffects();
     });
 
     it(`유저는 최소 충전 단위로 포인트를 충전할 수 있다.`, async () => {
       // ** Given
       const userId = 1;
-      const invalidChargeAmount = MIN_CHARGE_POINT_UNIT - 1;
+      const invalidChargeAmount = CHARGE_POINT_UNIT - 1;
       preventSideEffects();
 
       // ** When / Then
       await expect(
         userService.chargeUserPoint(userId, invalidChargeAmount),
       ).rejects.toThrow(
-        new BadRequestException(
-          `포인트는 최소 ${MIN_CHARGE_POINT_UNIT} 단위로 충전할 수 있습니다.`,
-        ),
+        new BadRequestException(pointError.INVALID_CHARGE_UNIT),
       );
+      expectNoSideEffects();
+    });
+
+    it('핸들링 되지 않는 오류 발생 시 오류를 던진다', async () => {
+      // ** Given
+      const userId = 1;
+      const chargeAmount = 1000;
+      mockErroredSideEffects();
+
+      // ** When / Then
+      await expect(
+        userService.chargeUserPoint(userId, chargeAmount),
+      ).rejects.toThrow(new InternalServerErrorException());
       expectNoSideEffects();
     });
   });
@@ -300,17 +342,13 @@ describe('PointService', () => {
     it(`유저는 최소 사용 단위로 포인트를 사용할 수 있다.`, async () => {
       // ** Given
       const userId = 1;
-      const invalidUseAmount = MIN_USE_POINT_UNIT - 1;
+      const invalidUseAmount = USE_POINT_UNIT - 1;
       preventSideEffects();
 
       // ** When / Then
       await expect(
         userService.useUserPoint(userId, invalidUseAmount),
-      ).rejects.toThrow(
-        new BadRequestException(
-          `포인트는 최소 ${MIN_USE_POINT_UNIT} 단위로 사용할 수 있습니다.`,
-        ),
-      );
+      ).rejects.toThrow(new BadRequestException(pointError.INVALID_USE_UNIT));
       expectNoSideEffects();
     });
 
@@ -329,9 +367,22 @@ describe('PointService', () => {
 
       // ** When / Then
       await expect(userService.useUserPoint(userId, useAmount)).rejects.toThrow(
-        new BadRequestException('포인트가 부족합니다.'),
+        new BadRequestException(pointError.INSUFFICIENT_POINTS),
       );
       expect(userPointTable.selectById).toHaveBeenCalledWith(userId);
+      expectNoSideEffects();
+    });
+
+    it('핸들링 되지 않는 오류 발생 시 오류를 던진다', async () => {
+      // ** Given
+      const userId = 1;
+      const useAmount = 100;
+      mockErroredSideEffects();
+
+      // ** When / Then
+      await expect(userService.useUserPoint(userId, useAmount)).rejects.toThrow(
+        new InternalServerErrorException(),
+      );
       expectNoSideEffects();
     });
   });

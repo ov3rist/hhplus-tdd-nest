@@ -2,6 +2,7 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { UserPointTable } from '../database/userpoint.table';
 import { PointHistoryTable } from '../database/pointhistory.table';
 import { TransactionType, UserPoint } from './point.model';
+import { pointConstants, pointError } from '../constants/point.constant';
 
 @Injectable()
 export class PointService {
@@ -11,24 +12,10 @@ export class PointService {
   ) {}
 
   // Constants (정책사항)
-  private readonly MAX_POINT = 10000; // 최대 보유 포인트
-  private readonly MIN_POINT = 0; // 최소 보유 포인트
-  private readonly MIN_CHARGE_POINT_UNIT = 100; // 최소 충전 포인트 단위
-  private readonly MIN_USE_POINT_UNIT = 100; // 최소 사용 포인트 단위
-
-  // getters
-  getMaxPoint(): number {
-    return this.MAX_POINT;
-  }
-  getMinPoint(): number {
-    return this.MIN_POINT;
-  }
-  getMinChargePointUnit(): number {
-    return this.MIN_CHARGE_POINT_UNIT;
-  }
-  getMinUsePointUnit(): number {
-    return this.MIN_USE_POINT_UNIT;
-  }
+  private readonly MAX_POINT = pointConstants.MAX_POINT; // 최대 보유 포인트
+  private readonly MIN_POINT = pointConstants.MIN_POINT; // 최소 보유 포인트
+  private readonly CHARGE_POINT_UNIT = pointConstants.CHARGE_POINT_UNIT; // 최소 충전 포인트 단위
+  private readonly USE_POINT_UNIT = pointConstants.USE_POINT_UNIT; // 최소 사용 포인트 단위
 
   // Validation helpers
   private validateUserId(userId: number): void {
@@ -44,18 +31,14 @@ export class PointService {
   }
 
   private validateChargeUnit(amount: number): void {
-    if (amount % this.MIN_CHARGE_POINT_UNIT !== 0) {
-      throw new BadRequestException(
-        `포인트는 최소 ${this.MIN_CHARGE_POINT_UNIT} 단위로 충전할 수 있습니다.`,
-      );
+    if (amount % this.CHARGE_POINT_UNIT !== 0) {
+      throw new BadRequestException(pointError.INVALID_CHARGE_UNIT);
     }
   }
 
   private validateUseUnit(amount: number): void {
-    if (amount % this.MIN_USE_POINT_UNIT !== 0) {
-      throw new BadRequestException(
-        `포인트는 최소 ${this.MIN_USE_POINT_UNIT} 단위로 사용할 수 있습니다.`,
-      );
+    if (amount % this.USE_POINT_UNIT !== 0) {
+      throw new BadRequestException(pointError.INVALID_USE_UNIT);
     }
   }
 
@@ -142,9 +125,7 @@ export class PointService {
         const newPoint = currentPoint.point + amount;
 
         if (newPoint > this.MAX_POINT) {
-          throw new BadRequestException(
-            `포인트는 최대 ${this.MAX_POINT}까지 보유할 수 있습니다.`,
-          );
+          throw new BadRequestException(pointError.EXCEED_MAX_POINT);
         }
 
         const updatedPoint = await this.userPointTable.insertOrUpdate(
@@ -180,7 +161,7 @@ export class PointService {
         const newPoint = currentPoint.point - amount;
 
         if (newPoint < this.MIN_POINT) {
-          throw new BadRequestException('포인트가 부족합니다.');
+          throw new BadRequestException(pointError.INSUFFICIENT_POINTS);
         }
 
         const updatedPoint = await this.userPointTable.insertOrUpdate(
