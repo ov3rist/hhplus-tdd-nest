@@ -4,7 +4,7 @@ import { UserPointTable } from '../database/userpoint.table';
 import { PointHistoryTable } from '../database/pointhistory.table';
 import { UserPoint, PointHistory, TransactionType } from './point.model';
 import { BadRequestException } from '@nestjs/common';
-import { pointConstants } from '../constants/point.constant';
+import { pointConstants, pointError } from '../constants/point.constant';
 
 const { MAX_POINT, CHARGE_POINT_UNIT, USE_POINT_UNIT } = pointConstants;
 
@@ -191,11 +191,7 @@ describe('PointService', () => {
       // ** When / Then
       await expect(
         userService.chargeUserPoint(userId, chargeAmount),
-      ).rejects.toThrow(
-        new BadRequestException(
-          `포인트는 최대 ${MAX_POINT}까지 보유할 수 있습니다.`,
-        ),
-      );
+      ).rejects.toThrow(new BadRequestException(pointError.EXCEED_MAX_POINT));
       expectNoSideEffects();
     });
 
@@ -209,9 +205,7 @@ describe('PointService', () => {
       await expect(
         userService.chargeUserPoint(userId, invalidChargeAmount),
       ).rejects.toThrow(
-        new BadRequestException(
-          `포인트는 최소 ${CHARGE_POINT_UNIT} 단위로 충전할 수 있습니다.`,
-        ),
+        new BadRequestException(pointError.INVALID_CHARGE_UNIT),
       );
       expectNoSideEffects();
     });
@@ -300,11 +294,7 @@ describe('PointService', () => {
       // ** When / Then
       await expect(
         userService.useUserPoint(userId, invalidUseAmount),
-      ).rejects.toThrow(
-        new BadRequestException(
-          `포인트는 최소 ${USE_POINT_UNIT} 단위로 사용할 수 있습니다.`,
-        ),
-      );
+      ).rejects.toThrow(new BadRequestException(pointError.INVALID_USE_UNIT));
       expectNoSideEffects();
     });
 
@@ -323,7 +313,7 @@ describe('PointService', () => {
 
       // ** When / Then
       await expect(userService.useUserPoint(userId, useAmount)).rejects.toThrow(
-        new BadRequestException('포인트가 부족합니다.'),
+        new BadRequestException(pointError.INSUFFICIENT_POINTS),
       );
       expect(userPointTable.selectById).toHaveBeenCalledWith(userId);
       expectNoSideEffects();
