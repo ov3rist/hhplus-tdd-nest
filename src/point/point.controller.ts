@@ -7,7 +7,7 @@ import {
   ValidationPipe,
 } from '@nestjs/common';
 import { PointHistory, UserPoint } from './point.model';
-import { PointBody as PointDto } from './point.dto';
+import { PointBody as PointDto } from './dto/point.dto';
 import { PointService } from './point.service';
 
 @Controller('/point')

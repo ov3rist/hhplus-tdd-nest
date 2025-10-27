@@ -9,8 +9,8 @@ describe('Point System (e2e)', () => {
 
   // 포인트 정책 상수
   const MAX_POINT = 10000;
-  const MIN_CHARGE_POINT_UNIT = 100;
-  const MIN_USE_POINT_UNIT = 100;
+  const CHARGE_POINT_UNIT = 100;
+  const USE_POINT_UNIT = 100;
 
   beforeEach(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -68,7 +68,7 @@ describe('Point System (e2e)', () => {
     it('유효한 금액으로 포인트를 충전할 수 있다', async () => {
       // Given
       const userId = 1;
-      const chargeAmount = MIN_CHARGE_POINT_UNIT;
+      const chargeAmount = CHARGE_POINT_UNIT;
 
       // 초기 포인트 조회
       const initialResponse = await request(app.getHttpServer())
@@ -90,7 +90,7 @@ describe('Point System (e2e)', () => {
     it('충전 단위와 다르게 충전 시 400 오류를 반환한다', async () => {
       // Given
       const userId = 1;
-      const invalidAmount = MIN_CHARGE_POINT_UNIT - 1;
+      const invalidAmount = CHARGE_POINT_UNIT - 1;
 
       // When & Then
       await request(app.getHttpServer())
@@ -102,7 +102,7 @@ describe('Point System (e2e)', () => {
     it('최대 포인트 한도를 초과하여 충전 시 400 오류를 반환한다', async () => {
       // Given
       const userId = 2;
-      const excessiveAmount = MAX_POINT + MIN_CHARGE_POINT_UNIT;
+      const excessiveAmount = MAX_POINT + CHARGE_POINT_UNIT;
 
       // When & Then
       await request(app.getHttpServer())
@@ -129,7 +129,7 @@ describe('Point System (e2e)', () => {
       // Given
       const userId = 3;
       const chargeAmount = 1000;
-      const useAmount = MIN_USE_POINT_UNIT;
+      const useAmount = USE_POINT_UNIT;
 
       // 포인트를 먼저 충전
       await request(app.getHttpServer())
@@ -157,7 +157,7 @@ describe('Point System (e2e)', () => {
     it('최소 사용 단위 미만으로 사용 시 400 오류를 반환한다', async () => {
       // Given
       const userId = 1;
-      const invalidAmount = MIN_USE_POINT_UNIT - 1;
+      const invalidAmount = USE_POINT_UNIT - 1;
 
       // When & Then
       await request(app.getHttpServer())
@@ -196,8 +196,8 @@ describe('Point System (e2e)', () => {
       // Given
       const userId = 7;
       const initialChargeAmount = 1000;
-      const chargeAmount = MIN_CHARGE_POINT_UNIT;
-      const useAmount = MIN_USE_POINT_UNIT;
+      const chargeAmount = CHARGE_POINT_UNIT;
+      const useAmount = USE_POINT_UNIT;
 
       // 초기 포인트 충전
       await request(app.getHttpServer())
@@ -236,7 +236,7 @@ describe('Point System (e2e)', () => {
     it('충전 시 동시 요청에서 동시성 제어가 적용된다', async () => {
       // Given
       const userId = 12;
-      const chargeAmount = MIN_CHARGE_POINT_UNIT;
+      const chargeAmount = CHARGE_POINT_UNIT;
 
       // 초기 포인트 조회
       const initialResponse = await request(app.getHttpServer())
@@ -273,7 +273,7 @@ describe('Point System (e2e)', () => {
       // Given
       const userId = 13;
       const chargeAmount = 5000; // 충분한 포인트 충전
-      const useAmount = MIN_USE_POINT_UNIT;
+      const useAmount = USE_POINT_UNIT;
 
       // 초기 포인트 충전
       await request(app.getHttpServer())
@@ -316,7 +316,7 @@ describe('Point System (e2e)', () => {
       // Given
       const userId1 = 8;
       const userId2 = 9;
-      const chargeAmount = MIN_CHARGE_POINT_UNIT;
+      const chargeAmount = CHARGE_POINT_UNIT;
 
       // 초기 포인트 조회
       const [initial1, initial2] = await Promise.all([
@@ -366,7 +366,7 @@ describe('Point System (e2e)', () => {
     it('포인트 충전 후 히스토리에 기록된다', async () => {
       // Given
       const userId = 10;
-      const chargeAmount = MIN_CHARGE_POINT_UNIT;
+      const chargeAmount = CHARGE_POINT_UNIT;
 
       // 초기 히스토리 조회
       const initialHistoryResponse = await request(app.getHttpServer())
@@ -398,7 +398,7 @@ describe('Point System (e2e)', () => {
       // Given
       const userId = 11;
       const chargeAmount = 1000;
-      const useAmount = MIN_USE_POINT_UNIT;
+      const useAmount = USE_POINT_UNIT;
 
       // 포인트 충전
       await request(app.getHttpServer())

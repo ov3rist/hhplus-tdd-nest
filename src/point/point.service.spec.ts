@@ -4,15 +4,14 @@ import { UserPointTable } from '../database/userpoint.table';
 import { PointHistoryTable } from '../database/pointhistory.table';
 import { UserPoint, PointHistory, TransactionType } from './point.model';
 import { BadRequestException } from '@nestjs/common';
+import { pointConstants } from '../constants/point.constant';
+
+const { MAX_POINT, CHARGE_POINT_UNIT, USE_POINT_UNIT } = pointConstants;
 
 describe('PointService', () => {
   let userService: PointService;
   let userPointTable: UserPointTable;
   let pointHistoryTable: PointHistoryTable;
-  let MAX_POINT: number;
-  let MIN_POINT: number;
-  let MIN_CHARGE_POINT_UNIT: number;
-  let MIN_USE_POINT_UNIT: number;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -22,11 +21,6 @@ describe('PointService', () => {
     userService = module.get<PointService>(PointService);
     userPointTable = module.get<UserPointTable>(UserPointTable);
     pointHistoryTable = module.get<PointHistoryTable>(PointHistoryTable);
-
-    MAX_POINT = userService.getMaxPoint();
-    MIN_POINT = userService.getMinPoint();
-    MIN_CHARGE_POINT_UNIT = userService.getMinChargePointUnit();
-    MIN_USE_POINT_UNIT = userService.getMinUsePointUnit();
 
     jest.useFakeTimers().setSystemTime(new Date('2025-01-01T09:00:00Z'));
   });
@@ -208,7 +202,7 @@ describe('PointService', () => {
     it(`유저는 최소 충전 단위로 포인트를 충전할 수 있다.`, async () => {
       // ** Given
       const userId = 1;
-      const invalidChargeAmount = MIN_CHARGE_POINT_UNIT - 1;
+      const invalidChargeAmount = CHARGE_POINT_UNIT - 1;
       preventSideEffects();
 
       // ** When / Then
@@ -216,7 +210,7 @@ describe('PointService', () => {
         userService.chargeUserPoint(userId, invalidChargeAmount),
       ).rejects.toThrow(
         new BadRequestException(
-          `포인트는 최소 ${MIN_CHARGE_POINT_UNIT} 단위로 충전할 수 있습니다.`,
+          `포인트는 최소 ${CHARGE_POINT_UNIT} 단위로 충전할 수 있습니다.`,
         ),
       );
       expectNoSideEffects();
@@ -300,7 +294,7 @@ describe('PointService', () => {
     it(`유저는 최소 사용 단위로 포인트를 사용할 수 있다.`, async () => {
       // ** Given
       const userId = 1;
-      const invalidUseAmount = MIN_USE_POINT_UNIT - 1;
+      const invalidUseAmount = USE_POINT_UNIT - 1;
       preventSideEffects();
 
       // ** When / Then
@@ -308,7 +302,7 @@ describe('PointService', () => {
         userService.useUserPoint(userId, invalidUseAmount),
       ).rejects.toThrow(
         new BadRequestException(
-          `포인트는 최소 ${MIN_USE_POINT_UNIT} 단위로 사용할 수 있습니다.`,
+          `포인트는 최소 ${USE_POINT_UNIT} 단위로 사용할 수 있습니다.`,
         ),
       );
       expectNoSideEffects();
